@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="js/viz.js"></script>
+<body>
+<div id="svg"></div>
+<script>
+var zonedata ={
+		zones:[
+			{name:"INTERNET",layer:1},
+			{name:"INTRANET",layer:1},
+			{name:"PARNTERNET",layer:1},
+			{name:"DMZ",layer:2,c:[
+				{id:"0018_0001",name:'DMZ',c:[
+					{id:"0019_0001",name:"APPSET",c:[
+						{id:"0020_0001",name:"HOST1",c:[
+							{id:"0021_0001",name:"ins1"},
+							{id:"0021_0002",name:"ins2"},
+							{id:"0021_0003",name:"ins3"}
+							]
+						},
+						{id:"0020_0002",name:"HOST2",c:[
+							{id:"0021_0004",name:"ins1"},
+							{id:"0021_0005",name:"ins2"},
+							{id:"0021_0006",name:"ins3"}
+							]
+						},
+						{id:"0020_0001",name:"HOST1",c:[
+							{id:"0021_0001",name:"ins1"},
+							{id:"0021_0002",name:"ins2"},
+							{id:"0021_0003",name:"ins3"}
+							]
+						},
+						{id:"0020_0002",name:"HOST2",c:[
+							{id:"0021_0004",name:"ins1"},
+							{id:"0021_0005",name:"ins2"},
+							{id:"0021_0006",name:"ins3"}
+							]
+						}]
+					},
+					{id:"0019_0002",name:"REDISSET"},
+					{id:"0019_0003",name:"DBSET"}]
+				}
+			]},
+			{name:"MGMT",layer:2},
+			{name:"ECN",layer:2},
+			{name:"SF",layer:3,c:[
+				{id:"0018_0015",name:'CS',c:[
+					{id:"0019_0004",name:"APPSET",c:[
+						{id:"0020_0003",name:"HOST1",c:[
+							{id:"0021_0007",name:"ins1"},
+							{id:"0021_0008",name:"ins2"},
+							{id:"0021_0009",name:"ins3"}
+							]
+						},
+						{id:"0020_0003",name:"HOST1",c:[
+							{id:"0021_0007",name:"ins1"},
+							{id:"0021_0008",name:"ins2"},
+							{id:"0021_0009",name:"ins3"}
+							]
+						},
+						{id:"0020_0003",name:"HOST1",c:[
+							{id:"0021_0007",name:"ins1"},
+							{id:"0021_0008",name:"ins2"},
+							{id:"0021_0009",name:"ins3"}
+							]
+						},
+						{id:"0020_0003",name:"HOST1",c:[
+							{id:"0021_0007",name:"ins1"},
+							{id:"0021_0008",name:"ins2"},
+							{id:"0021_0009",name:"ins3"}
+							]
+						},
+						{id:"0020_0003",name:"HOST1",c:[
+							{id:"0021_0007",name:"ins1"},
+							{id:"0021_0008",name:"ins2"},
+							{id:"0021_0009",name:"ins3"}
+							]
+						}
+					]},
+					{id:"0019_0005",name:"REDISSET"},
+					{id:"0019_0006",name:"DBSET"}
+				]},
+				{id:"0018_0016",name:'ADM',c:[{id:"0019_0007",name:"APPSET"},{id:"0019_0008",name:"REDISSET"}]},
+				// {id:"0018_0017",name:'BDP'},
+				// {id:"0018_0018",name:'CDCN'}
+				]
+			}
+		],
+		links:[
+			{azone:"INTERNET",bzone:"DMZ"},
+			{azone:"PARNTERNET",bzone:"ECN"},
+			{azone:"INTRANET",bzone:"MGMT"},
+			{azone:"DMZ",bzone:"SF"},
+			{azone:"MGMT",bzone:"SF"},
+			{azone:"ECN",bzone:"SF"},
+			{azone:"MGMT",bzone:"ECN"},
+			{azone:"DMZ",bzone:"MGMT"}
+		]
+};
+	
+	var zones = zonedata.zones;
+	var links = zonedata.links;
+	var fsize = 16; //初始字体大小
+	var dot = 'digraph G{ rankdir=TB nodesep=0.5 \n node[shape="box",fontsize='+fsize+',labelloc="t",penwidth=2] \n size="20,15";\n';
+	var layers = new Map();
+	zones.forEach(function (i){
+				if(layers.has(i.layer)){
+					layers.get(i.layer).push(i)
+				}else{
+					var z=[];
+					z.push(i);
+					layers.set(i.layer,z);
+				}
+		});//处理安全区域分层
+	layers.forEach(function(i){
+		dot+='{rank="same";\n';
+		n=layers.size;
+		lg=(15-3)/n;
+		ll=(20-0.5*i.length)/i.length;
+		i.forEach(function(k){
+			dot+=k.name+'[id="'+k.name+'",width='+ll+',height='+lg+'];\n';
+		});
+		dot+='}\n'
+	});//逐层添加dot
+	links.forEach(function(i){
+		dot+=i.azone+'->'+i.bzone+'[arrowhead="none"];\n'
+	});//逐个添加link的dot
+	dot+='}\n';
+	
+	var svgroot=d3.select('#svg');
+	svgroot.html(Viz(dot, {
+        engine: 'dot',
+        format: 'svg'
+      }));
+	
+	var gap = 15;//初始节点间隔 
+	var colors = ['ghostwhite','lightgray','darkgrey','gray','dimgray','cadetblue'];//每层节点的颜色
+	var graph = svgroot.select('#graph0');
+	
+	var points = svgroot.select('#SF').select('polygon').attr('points').split(' ');
+	var p1 = {x:parseInt(points[1].split(",")[0]),y:parseInt(points[1].split(",")[1])}
+	var pw1 = parseInt(points[0].split(",")[0]-points[1].split(",")[0]);
+	var ph1 = parseInt(points[2].split(",")[1]-points[1].split(",")[1]);
+	//获取SF节点的左上角point和长、宽数据
+	setChildren(zones[6].c,p1,pw1,ph1,fsize,0);//使用SVG添加递归添加SF的子节点
+	var points = svgroot.select('#DMZ').select('polygon').attr('points').split(' ');
+	var p2 = {x:parseInt(points[1].split(",")[0]),y:parseInt(points[1].split(",")[1])}
+	var pw2 = parseInt(points[0].split(",")[0]-points[1].split(",")[0]);
+	var ph2 = parseInt(points[2].split(",")[1]-points[1].split(",")[1]);
+	//获取SF节点的左上角point和长、宽数据
+	setChildren(zones[3].c,p2,pw2,ph2,fsize,0);//使用SVG添加递归添加DMZ的子节点
+	
+	
+	function setChildren(nodes,p1,pw,ph,tfsize,deep){
+		var n = nodes.length; //子节点数量
+		var w,h,mgap,fontsize,strokewidth;
+		var color = colors[deep];//节点颜色
+		//var fontsize = Math.round(tfsize*0.8);//节点字体大小，递归一次，减少20%
+		if(pw > ph*1.2){//判断长宽比，如果长度大于高度的1.2倍，使用横向分布
+			if((pw/n)>(ph-tfsize)){
+				mgap = (ph-tfsize)*0.04;
+				fontsize = (tfsize*0.8>(ph-tfsize)*0.1)?(ph-tfsize)*0.1:tfsize*0.8;
+				fontsize =  fontsize < 5 ? 8: fontsize
+				console.log(fontsize)
+				strokewidth = (ph-tfsize)*0.005
+			}else{
+				mgap = pw/n*0.04;
+				fontsize = (tfsize*0.8>pw/n*0.1)?pw/n*0.1:tfsize*0.8;
+				fontsize =  fontsize < 5 ? 8: fontsize
+				console.log(fontsize)
+				strokewidth = pw/n*0.005
+			}
+			w = (pw-mgap)/n-mgap;//子节点长度
+			h = ph-tfsize-2*mgap;//子节点高度
+			
+			for(var i=0;i<n;i++){
+				rx = p1.x+(w+mgap)*i+mgap; //子节点的x坐标
+				ry = p1.y+tfsize+mgap;//子节点的y坐标
+				tx = p1.x+(w+mgap)*i+w*0.5+mgap;//子节点文本的x坐标
+				if(Array.isArray(nodes[i].c)){//判断是否还有子节点
+					ty = p1.y+tfsize+mgap+fontsize;//子节点文本的y坐标
+				}else{
+					ty = p1.y+tfsize+mgap+h*0.5;//子节点文本的y坐标
+				}
+				g = graph.append('g').attr('class','node').attr("id",nodes[i].id);
+				g.append('rect').attr('x',rx).attr('y',ry).attr('width',w).attr('height',h).attr('stroke','black').attr('fill',color).attr('stroke-width',strokewidth);
+				g.append('text').attr('x',tx).attr('y',ty).text(nodes[i].name).attr('style','text-anchor:middle').attr('font-size',fontsize);
+				if(Array.isArray(nodes[i].c)){//判断是否还有子节点
+					
+					setChildren(nodes[i].c,{x:rx,y:ry},w,h,fontsize,deep+1);//递归添加子节点
+				}
+			}
+			
+		}else{//如果长度小于等于高度的1.2倍，使用纵向分布
+			if(((ph-tfsize)/n)>pw){
+				mgap = pw*0.04;//间隙比例4%
+				fontsize = (tfsize*0.8>pw*0.1)?pw*0.1:tfsize*0.8;//字体取小值，确保递减
+				fontsize =  fontsize < 5 ? 8: fontsize
+				strokewidth = pw*0.005//线框为0.5%
+			}else{
+				mgap = (ph-tfsize)/n*0.04;
+				fontsize = (tfsize*0.8>(ph-tfsize)/n*0.1)?(ph-tfsize)/n*0.1:tfsize*0.8;
+				fontsize =  fontsize < 5 ? 8: fontsize
+				strokewidth = (ph-tfsize)/n*0.005
+			}
+			w = pw-2*mgap;
+			h = (ph-tfsize-mgap)/n-mgap;
+			for(var i=0;i<n;i++){
+				rx = p1.x+mgap;//子节点的x坐标
+				ry = p1.y+tfsize+(h+mgap)*i+mgap;//子节点的y坐标
+				tx = p1.x+w*0.5+mgap;//子节点文本的x坐标
+				if(Array.isArray(nodes[i].c)){//判断是否还有子节点
+					ty = p1.y+tfsize+(h+mgap)*i+fontsize+mgap;//子节点文本的y坐标
+				}else{
+					ty = p1.y+tfsize+(h+mgap)*i+h*0.5+mgap;//子节点文本的y坐标
+				}
+				
+				g = graph.append('g').attr('class','node').attr("id",nodes[i].id);
+				g.append('rect').attr('x',rx).attr('y',ry).attr('width',w).attr('height',h).attr('stroke','black').attr('fill',color).attr('stroke-width',strokewidth);
+				g.append('text').attr('x',tx).attr('y',ty).text(nodes[i].name).attr('style','text-anchor:middle').attr('font-size',fontsize);
+				if(Array.isArray(nodes[i].c)){//判断是否还有子节点
+					setChildren(nodes[i].c,{x:rx,y:ry},w,h,fontsize,deep+1);//递归添加子节点
+				}
+			}
+		}
+	}
+	
+	
+
+	
+</script>
+</body>
