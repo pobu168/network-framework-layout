@@ -10,7 +10,7 @@ var zonedata ={
 			{name:"INTERNET",layer:1,deep:1},
 			{name:"INTRANET",layer:1,deep:1},
 			{name:"PARNTERNET",layer:1,deep:1},
-			{name:"DMZ",layer:2,deep:5,c:[
+			{name:"DMZ",layer:2,deep:4,c:[
 				{id:"0018_0001",name:'DMZ',c:[
 					{id:"0019_0001",name:"APPSET",c:[
 						{id:"0020_0001",name:"HOST1",c:[
@@ -31,10 +31,23 @@ var zonedata ={
 							{id:"0021_0003",name:"ins3"}
 							]
 						},
+						{id:"0020_0001",name:"HOST1x",c:[
+							{id:"0021_0001",name:"ins1"},
+							{id:"0021_0002",name:"ins2"},
+							{id:"0021_0003",name:"ins3"}
+							]
+						},
+						{id:"0020_0001",name:"HOST1xx",c:[
+							{id:"0021_0001",name:"ins1"},
+							{id:"0021_0002",name:"ins2"},
+							{id:"0021_0003",name:"ins3"}
+							]
+						},
 						{id:"0020_0002",name:"HOST2",c:[
 							{id:"0021_0004",name:"ins1"},
 							{id:"0021_0005",name:"ins2"},
-							{id:"0021_0006",name:"ins3"}
+							{id:"0021_0006",name:"ins3"},
+							{id:"0021_0007",name:"ins4"},
 							]
 						}]
 					},
@@ -44,7 +57,7 @@ var zonedata ={
 			]},
 			{name:"MGMT",layer:2,deep:1},
 			{name:"ECN",layer:2,deep:1},
-			{name:"SF",layer:3,deep:5,c:[
+			{name:"SF",layer:3,deep:4,c:[
 				{id:"0018_0015",name:'CS',c:[
 					{id:"0019_0004",name:"APPSET",c:[
 						{id:"0020_0003",name:"HOST1",c:[
@@ -74,7 +87,11 @@ var zonedata ={
 						{id:"0020_0003",name:"HOST1",c:[
 							{id:"0021_0007",name:"ins1"},
 							{id:"0021_0008",name:"ins2"},
-							{id:"0021_0009",name:"ins3"}
+							{id:"0021_0009",name:"ins3"},
+							{id:"0021_0009",name:"ins3"},
+							{id:"0021_0009",name:"ins3"},
+							{id:"0021_0009",name:"ins3"},
+							{id:"0021_0009",name:"ins4"}
 							]
 						}
 					]},
@@ -113,31 +130,27 @@ var zonedata ={
 					layers.set(i.layer,z);
 				}
 		});//处理安全区域分层
-	console.log(layers)
 	layers.forEach(function(i){
+		console.log(i)
 		var deep = 0
 		i.forEach((item)=>{
 			if (item.deep>deep) {
 				deep = item.deep
 			}
 		})
-		console.log(deep)
 		dot+='{rank="same";\n';
 		n=layers.size;
 		lg=(15-3)/n*(deep*0.3);
 		ll=(20-0.5*i.length)/i.length;
-		console.log(ll,lg)
 		i.forEach(function(k){
 			dot+=k.name+'[id="'+k.name+'",width='+ll+',height='+lg+'];\n';
 		});
 		dot+='}\n'
 	});//逐层添加dot
-	console.log(dot)
 	links.forEach(function(i){
 		dot+=i.azone+'->'+i.bzone+'[arrowhead="none"];\n'
 	});//逐个添加link的dot
 	dot+='}\n';
-	// console.log(dot)
 	var svgroot=d3.select('#svg');
 	svgroot.html(Viz(dot, {
         engine: 'dot',
@@ -149,13 +162,9 @@ var zonedata ={
 	var graph = svgroot.select('#graph0');
 	
 	var points = svgroot.select('#SF').select('polygon').attr('points').split(' ');
-    // console.log(points)
 	var p1 = {x:parseInt(points[1].split(",")[0]),y:parseInt(points[1].split(",")[1])}
-	// console.log(p1)
 	var pw1 = parseInt(points[0].split(",")[0]-points[1].split(",")[0]);
-	// console.log(pw1)
 	var ph1 = parseInt(points[2].split(",")[1]-points[1].split(",")[1]);
-	// console.log(ph1)
 	// //获取SF节点的左上角point和长、宽数据
 	setChildren(zones[6].c,p1,pw1,ph1,fsize,0);//使用SVG添加递归添加SF的子节点
 	var points = svgroot.select('#DMZ').select('polygon').attr('points').split(' ');
@@ -168,7 +177,6 @@ var zonedata ={
 	
 	function setChildren(nodes,p1,pw,ph,tfsize,deep){
 		var n = nodes.length; //子节点数量
-		// console.log(n)
 		var w,h,mgap,fontsize,strokewidth;
 		var color = colors[deep];//节点颜色
 		//var fontsize = Math.round(tfsize*0.8);//节点字体大小，递归一次，减少20%
@@ -177,13 +185,11 @@ var zonedata ={
 				mgap = (ph-tfsize)*0.04;
 				fontsize = (tfsize*0.8>(ph-tfsize)*0.1)?(ph-tfsize)*0.1:tfsize*0.8;
 				fontsize =  fontsize < 8 ? 8: fontsize
-				// console.log(fontsize)
 				strokewidth = (ph-tfsize)*0.005
 			}else{
 				mgap = pw/n*0.04;
 				fontsize = (tfsize*0.8>pw/n*0.1)?pw/n*0.1:tfsize*0.8;
 				fontsize =  fontsize < 8 ? 8: fontsize
-				// console.log(fontsize)
 				strokewidth = pw/n*0.005
 			}
 			w = (pw-mgap)/n-mgap;//子节点长度
